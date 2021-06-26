@@ -256,10 +256,6 @@ func (vos vos) UserHomeDir() (string, error) {
 	return vos.home, nil
 }
 
-func (vos) Exit(code int) {
-	panic(exitCode(code))
-}
-
 func (vos vos) get(p string) (dirEntry, error) {
 	dir := vos.entries
 	var got dirEntry = dir
@@ -307,18 +303,6 @@ func MkTempDir(vos vos) string {
 	return path
 }
 
-// CatchExit allows recovering from vos.Exit() and calls catch with the denoted
-// exit code.
-func CatchExit(catch func(code int)) {
-	if r := recover(); r != nil {
-		if code, ok := r.(exitCode); ok {
-			catch(int(code))
-		} else {
-			panic(r)
-		}
-	}
-}
-
 // splitPath splits a given path into a slice of path components.
 func (vos vos) splitPath(p string) []string {
 	sep := string(vos.PathSeparator())
@@ -347,5 +331,3 @@ func newPathError(op, path string, err error) *os.PathError {
 		Err:  err,
 	}
 }
-
-type exitCode int
