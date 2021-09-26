@@ -2,6 +2,7 @@
 package oos
 
 import (
+	"io"
 	"os"
 )
 
@@ -85,4 +86,14 @@ func (oos) UserHomeDir() (string, error) {
 
 func (oos) Exit(code int) {
 	os.Exit(code)
+}
+
+func (oos) Stdin() io.Reader {
+	return os.Stdin
+}
+func (oos) Stdout() io.Writer {
+	return os.Stdout
+}
+func (oos) Stderr() io.Writer {
+	return os.Stderr
 }

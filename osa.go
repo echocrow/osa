@@ -63,6 +63,8 @@ type I interface {
 	UserHomeDir() (string, error)
 	// Exit causes the current program to exit with the given status code.
 	Exit(code int)
+	// Stdio returns IO readers and writers for Stdin, Stdout, and Stderr.
+	Stdio
 }
 
 // Default returns the standard OS abstraction implementation.

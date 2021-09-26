@@ -2,8 +2,10 @@
 package vos
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -34,11 +36,19 @@ type vos struct {
 	pwd string
 
 	entries vDir
+
+	stdin  *bytes.Buffer
+	stdout *bytes.Buffer
+	stderr *bytes.Buffer
 }
 
 func New() vos {
 	v := &vos{
 		entries: newVDir(),
+
+		stdin:  new(bytes.Buffer),
+		stdout: new(bytes.Buffer),
+		stderr: new(bytes.Buffer),
 	}
 
 	sep := string(v.PathSeparator())
@@ -241,6 +251,16 @@ func (vos) Exit(code int) {
 	panic(exitCode(code))
 }
 
+func (vos vos) Stdin() io.Reader {
+	return vos.stdin
+}
+func (vos vos) Stdout() io.Writer {
+	return vos.stdout
+}
+func (vos vos) Stderr() io.Writer {
+	return vos.stderr
+}
+
 func (vos vos) get(p string) (dirEntry, error) {
 	dir := vos.entries
 	var got dirEntry = dir
@@ -286,6 +306,20 @@ func MkTempDir(vos vos) string {
 		panic(err)
 	}
 	return path
+}
+
+// GetStdio returns IO read-writers for Stdin, Stdout, and Stderr of the
+// vos instance.
+func GetStdio(vos vos) (stdin, stdout, stderr io.ReadWriter) {
+	return vos.stdin, vos.stdout, vos.stderr
+}
+
+// ClearStdio clears IO read-writers for Stdin, Stdout, and Stderr of the
+// vos instance.
+func ClearStdio(v vos) {
+	v.stdin.Reset()
+	v.stdout.Reset()
+	v.stderr.Reset()
 }
 
 // CatchExit allows recovering from vos.Exit() and calls catch with the denoted

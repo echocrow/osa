@@ -2,6 +2,7 @@ package testos
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -28,7 +29,11 @@ func AssertOrgOS(t *testing.T, osa osaPkg.I) {
 		testOsExitCodes(t, tests, encodeArgs, exit)
 	}
 
-	AssertOsa(t, osa, mkTempDir, assertExit)
+	getStdio := func() (in io.Writer, out, err io.Reader, reset func()) {
+		return patchOsStdio(t)
+	}
+
+	AssertOsa(t, osa, mkTempDir, assertExit, getStdio)
 
 	assertOsExternals(t, osa)
 }
@@ -106,4 +111,36 @@ func testOsExitCodes(
 			testOsExitCode(t, code, getArgs(code), exitFunc)
 		})
 	}
+}
+
+func patchOsStdio(t *testing.T) (
+	writeIn io.Writer,
+	readOut io.Reader,
+	readErr io.Reader,
+	reset func(),
+) {
+	orgIn, orgOut, orgErr := os.Stdin, os.Stdout, os.Stderr
+
+	rIn, wIn, err := os.Pipe()
+	require.NoError(t, err)
+
+	rOut, wOut, err := os.Pipe()
+	require.NoError(t, err)
+
+	rErr, wErr, err := os.Pipe()
+	require.NoError(t, err)
+
+	os.Stdin, os.Stdout, os.Stderr = rIn, wOut, wErr
+
+	reset = func() {
+		os.Stdin, os.Stdout, os.Stderr = orgIn, orgOut, orgErr
+		rIn.Close()
+		wIn.Close()
+		rOut.Close()
+		wOut.Close()
+		rErr.Close()
+		wErr.Close()
+	}
+
+	return wIn, rOut, rErr, reset
 }

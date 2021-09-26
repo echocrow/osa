@@ -2,6 +2,7 @@
 package testos
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"io/fs"
@@ -21,6 +22,7 @@ func AssertOsa(
 	osa osaPkg.I,
 	mkTempDir func() string,
 	assertExit func(t *testing.T),
+	getStdio func() (in io.Writer, out, err io.Reader, reset func()),
 ) {
 	t.Run("StatDir", func(t *testing.T) {
 		tmpDir := mkTempDir()
@@ -473,6 +475,71 @@ func AssertOsa(
 	})
 
 	t.Run("Exit", assertExit)
+
+	t.Run("Stdio", func(t *testing.T) {
+		wIn, rOut, rErr, resetStdio := getStdio()
+		if resetStdio != nil {
+			defer resetStdio()
+		}
+		AssertStdio(t, osa, wIn, rOut, rErr)
+	})
+}
+
+// AssertStdio tests Stdin, Stdout, and Stderr of an OS abstraction.
+func AssertStdio(
+	t *testing.T,
+	osa osaPkg.I,
+	wIn io.Writer,
+	rOut io.Reader,
+	rErr io.Reader,
+) bool {
+	ok := true
+	stdin, stdout, stderr := osa.Stdin(), osa.Stdout(), osa.Stderr()
+
+	ok = ok && t.Run("Stdin", func(t *testing.T) {
+		msg := "some input message"
+		_, err := io.WriteString(wIn, msg+"\n")
+		require.NoError(t, err)
+
+		reader := bufio.NewReader(stdin)
+		gotLine, _, err := reader.ReadLine()
+		assert.NoError(t, err)
+		got := string(gotLine)
+		assert.Equal(t, msg, got)
+	})
+
+	ok = ok && t.Run("Stdout", func(t *testing.T) {
+		msg := "some output message"
+		AssertStdWrite(t, stdout, rOut, msg)
+	})
+
+	ok = ok && t.Run("Stderr", func(t *testing.T) {
+		msg := "some error message"
+		AssertStdWrite(t, stderr, rErr, msg)
+	})
+
+	return ok
+}
+
+// AssertStdWrite tests a writable standard stream (i.e. Stdout or Stderr).
+func AssertStdWrite(
+	t *testing.T,
+	stdWrite io.Writer,
+	stdRead io.Reader,
+	message string,
+) bool {
+	ok := true
+
+	_, err := fmt.Fprintln(stdWrite, message)
+	ok = ok && assert.NoError(t, err)
+
+	reader := bufio.NewReader(stdRead)
+	gotLine, _, err := reader.ReadLine()
+	ok = ok && assert.NoError(t, err)
+	got := string(gotLine)
+	ok = ok && assert.Equal(t, message, got)
+
+	return ok
 }
 
 // RequireEmptyWrite requires that writing an empty file succeeds.

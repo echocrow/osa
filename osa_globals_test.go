@@ -1,6 +1,8 @@
 package osa_test
 
 import (
+	"bytes"
+	"io"
 	"testing"
 
 	"github.com/echocrow/osa"
@@ -59,7 +61,36 @@ func (gbl) UserHomeDir() (string, error) { return osa.UserHomeDir() }
 
 func (gbl) Exit(code int) { osa.Exit(code) }
 
+func (gbl) Stdin() io.Reader  { return osa.Stdin }
+func (gbl) Stdout() io.Writer { return osa.Stdout }
+func (gbl) Stderr() io.Writer { return osa.Stderr }
+
 func TestGlobals(t *testing.T) {
 	g := gbl{}
 	testos.AssertOrgOS(t, g)
+}
+
+type custStdioGbl struct {
+	gbl
+	stdio *bytes.Buffer
+}
+
+func (c custStdioGbl) Stdin() io.Reader  { return c.stdio }
+func (c custStdioGbl) Stdout() io.Writer { return c.stdio }
+func (c custStdioGbl) Stderr() io.Writer { return c.stdio }
+
+func TestGlobalStdio(t *testing.T) {
+	getStdout := func() io.Writer { return osa.Stdout }
+
+	stdio := new(bytes.Buffer)
+	cg := custStdioGbl{stdio: stdio}
+	reset := osa.Patch(cg)
+	defer reset()
+
+	// Require that stdio works as expected before the actual assertion.
+	testos.AssertStdio(t, cg, stdio, stdio, stdio)
+
+	stdout := getStdout()
+	msg := "some custom stdio message"
+	testos.AssertStdWrite(t, stdout, stdio, msg)
 }
