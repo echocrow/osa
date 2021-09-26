@@ -2,14 +2,13 @@ package vos
 
 import (
 	"io/fs"
-	"sort"
-
-	os "github.com/echocrow/osa"
 )
 
 type dirEntry interface {
 	isDir() bool
+	size() int
 	isEmpty() bool
+	toFile(name string) (fs.File, error)
 }
 
 type dirEntries map[string]dirEntry
@@ -61,23 +60,14 @@ func (es dirEntries) delete(name string) {
 	delete(es, name)
 }
 
-func (es dirEntries) read() []os.DirEntry {
-	res := make([]os.DirEntry, len(es))
-
-	names := make([]string, len(es))
+func (es dirEntries) list() []fsFileInfo {
+	contents := make([]fsFileInfo, len(es))
 	i := 0
-	for n := range es {
-		names[i] = n
+	for n, e := range es {
+		contents[i] = fsFileInfo{n, e.isDir(), int64(e.size())}
 		i++
 	}
-	sort.Strings(names)
-
-	for i, n := range names {
-		e := es[n]
-		res[i] = osDirEntry{n, e.isDir()}
-	}
-
-	return res
+	return contents
 }
 
 func (es dirEntries) size() int {
@@ -100,14 +90,41 @@ func (vDir) isDir() bool {
 	return true
 }
 
+func (d vDir) toFile(name string) (fs.File, error) {
+	return &fsDir{
+		fsFile: &fsFile{
+			name: name,
+			data: nil,
+		},
+		contents: d.list(),
+	}, nil
+}
+
 type vFile struct {
 	data []byte
+}
+
+func newVFile(data []byte) vFile {
+	if data == nil {
+		data = make([]byte, 0)
+	}
+	return vFile{data}
 }
 
 func (vFile) isDir() bool {
 	return false
 }
 
+func (f vFile) size() int {
+	return len(f.data)
+}
 func (f vFile) isEmpty() bool {
-	return len(f.data) == 0
+	return f.size() == 0
+}
+
+func (f vFile) toFile(name string) (fs.File, error) {
+	return &fsFile{
+		name: name,
+		data: f.data,
+	}, nil
 }

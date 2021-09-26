@@ -31,6 +31,10 @@ func AssertOsa(
 		dirname := filepath.Join(tmpDir, dirBasename)
 		RequireMkdir(t, osa, dirname)
 
+		RequireMkdir(t, osa, filepath.Join(dirname, "aSubdir"))
+		RequireMkdir(t, osa, filepath.Join(dirname, "someOtherSubdir"))
+		RequireEmptyWrite(t, osa, filepath.Join(dirname, "file.txt"))
+
 		got, err := osa.Open(dirname)
 		assert.NoError(t, err)
 		require.NotNil(t, got)
@@ -43,6 +47,82 @@ func AssertOsa(
 		gotConts := make([]byte, 1)
 		gotLen, err := got.Read(gotConts)
 		assert.Zero(t, gotLen)
+		assert.Error(t, err)
+
+		gotDir, ok := got.(fs.ReadDirFile)
+		assert.True(t, ok)
+		require.NotNil(t, gotDir)
+
+		gotEntries, err := gotDir.ReadDir(-1)
+		assert.NoError(t, err)
+		gotFSEntries := castFsEntries(gotEntries, true)
+		assert.Equal(t, []fsEntry{
+			{"aSubdir", true},
+			{"file.txt", false},
+			{"someOtherSubdir", true},
+		}, gotFSEntries)
+	})
+	t.Run("OpenDirPartialRead", func(t *testing.T) {
+		tmpDir := mkTempDir()
+
+		RequireMkdir(t, osa, filepath.Join(tmpDir, "subdir"))
+		RequireMkdir(t, osa, filepath.Join(tmpDir, "subdir", "deepDir"))
+		RequireMkdir(t, osa, filepath.Join(tmpDir, "anotherSubdir"))
+		RequireMkdir(t, osa, filepath.Join(tmpDir, "zzDir"))
+		RequireEmptyWrite(t, osa, filepath.Join(tmpDir, "someFile"))
+		RequireEmptyWrite(t, osa, filepath.Join(tmpDir, "aaFile"))
+
+		gotFile, err := osa.Open(tmpDir)
+		require.NoError(t, err)
+		gotDir, ok := gotFile.(fs.ReadDirFile)
+		require.True(t, ok)
+
+		wantAll := []fsEntry{
+			{"aaFile", false},
+			{"anotherSubdir", true},
+			{"someFile", false},
+			{"subdir", true},
+			{"zzDir", true},
+		}
+
+		got1, err := gotDir.ReadDir(3)
+		assert.NoError(t, err)
+		assert.Len(t, got1, 3)
+
+		got2, err := gotDir.ReadDir(1)
+		assert.NoError(t, err)
+		assert.Len(t, got2, 1)
+
+		got3, err := gotDir.ReadDir(2)
+		assert.NoError(t, err)
+		assert.Len(t, got3, 1)
+
+		got4, err := gotDir.ReadDir(2)
+		assert.ErrorIs(t, err, io.EOF)
+		assert.Empty(t, got4)
+
+		gotAll := make([]fs.DirEntry, 0, len(wantAll))
+		for _, g := range [][]fs.DirEntry{got1, got2, got3, got4} {
+			gotAll = append(gotAll, g...)
+		}
+
+		assert.Equal(t, wantAll, castFsEntries(gotAll, true))
+	})
+	t.Run("OpenDirReadErrClosed", func(t *testing.T) {
+		tmpDir := mkTempDir()
+		RequireEmptyWrite(t, osa, filepath.Join(tmpDir, "someDir"))
+
+		gotFile, err := osa.Open(tmpDir)
+		require.NoError(t, err)
+
+		gotDir, ok := gotFile.(fs.ReadDirFile)
+		require.True(t, ok)
+
+		err = gotDir.Close()
+		require.NoError(t, err)
+
+		gotEntries, err := gotDir.ReadDir(-1)
+		assert.Empty(t, gotEntries)
 		assert.Error(t, err)
 	})
 	t.Run("OpenFile", func(t *testing.T) {

@@ -1,151 +1,29 @@
 package vos
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"path/filepath"
-	"strings"
 
 	os "github.com/echocrow/osa"
 )
 
-var (
-	errNotDir   = errors.New("not a directory")
-	errNotFile  = errors.New("not a file")
-	errNotEmpty = errors.New("not empty")
-	errOpFailed = errors.New("operation failed")
-)
-
 type vosFS struct {
-	temp string
-
-	home   string
-	usrCch string
-	usrCfg string
-
-	pwd string
-
-	entries vDir
+	vfs
 }
 
 func newFS() vosFS {
-	v := &vosFS{
-		entries: newVDir(),
+	return vosFS{
+		vfs: newVFS(),
 	}
-
-	sep := string(v.PathSeparator())
-	mkdir := func(p string) {
-		if err := v.Mkdir(p, 0700); err != nil {
-			panic(err)
-		}
-	}
-
-	v.temp = sep + "temp"
-	mkdir(v.temp)
-
-	v.home = sep + "home"
-	mkdir(v.home)
-	v.usrCch = filepath.Join(v.home, ".cache")
-	mkdir(v.usrCch)
-	v.usrCfg = filepath.Join(v.home, ".config")
-	mkdir(v.usrCfg)
-
-	v.pwd = v.home
-
-	return *v
 }
 
 func (vosFS) PathSeparator() uint8 {
 	return filepath.Separator
 }
 
-func (v vosFS) Mkdir(name string, perm fs.FileMode) error {
-	parent, base := filepath.Split(name)
-	parDir, err := v.getDir(parent)
-	if err != nil {
-		return newPathError("mkdir", parent, err)
-	}
-	if err := parDir.add(base, newVDir()); err != nil {
-		return newPathError("mkdir", name, err)
-	}
-	return nil
-}
-
-func (v vosFS) get(p string) (dirEntry, error) {
-	dir := v.entries
-	var got dirEntry = dir
-	var err error
-	for _, name := range v.splitPath(p) {
-		got, err = dir.get(name)
-		if err != nil {
-			return nil, err
-		}
-		dir, _ = got.(vDir)
-	}
-	return got, nil
-}
-
-func (v vosFS) getDir(p string) (vDir, error) {
-	e, err := v.get(p)
-	if err != nil {
-		return vDir{}, err
-	}
-	dir, ok := e.(vDir)
-	if !ok {
-		return vDir{}, errNotDir
-	}
-	return dir, nil
-}
-
-func (v vosFS) getFile(p string) (vFile, error) {
-	e, err := v.get(p)
-	if err != nil {
-		return vFile{}, err
-	}
-	if file, ok := e.(vFile); !ok {
-		return vFile{}, errNotFile
-	} else {
-		return file, nil
-	}
-}
-
-// splitPath splits a given path into a slice of path components.
-func (v vosFS) splitPath(p string) []string {
-	sep := string(v.PathSeparator())
-	p = filepath.Clean(p)
-	if p == sep {
-		return nil
-	} else if !strings.HasPrefix(p, sep) {
-		panic(errors.New("unexpected relative path"))
-	}
-	return strings.Split(p, sep)[1:]
-}
-
-func (v vosFS) Open(name string) (fs.File, error) {
-	got, err := v.get(name)
-	if err != nil {
-		return nil, newPathError("open", name, err)
-	}
-	_, base := filepath.Split(name)
-	var data []byte
-	if file, ok := got.(vFile); ok {
-		data = file.data
-	}
-	return &fsFile{
-		name:   base,
-		data:   data,
-		isOpen: true,
-	}, nil
-}
-
 func (v vosFS) Stat(name string) (os.FileInfo, error) {
-	e, err := v.get(name)
-	if err != nil {
-		return nil, newPathError("stat", name, err)
-	}
-	_, base := filepath.Split(name)
-	return osFileInfo{base, e.isDir(), 0}, nil
+	return fs.Stat(v.vfs, name)
 }
 
 func (vosFS) IsExist(err error) bool {
@@ -160,7 +38,7 @@ func (v vosFS) IsPathSeparator(c uint8) bool {
 	return c == v.PathSeparator()
 }
 
-func (v vosFS) MkdirAll(name string, perm os.FileMode) error {
+func (v vosFS) MkdirAll(name string, perm fs.FileMode) error {
 	dir := v.entries
 	for _, n := range v.splitPath(name) {
 		got := dir.tryGet(n)
@@ -198,12 +76,8 @@ func (v vosFS) MkdirTemp(dir, pattern string) (string, error) {
 	}
 }
 
-func (v vosFS) ReadDir(name string) ([]os.DirEntry, error) {
-	dir, err := v.getDir(name)
-	if err != nil {
-		return nil, newPathError("open", name, err)
-	}
-	return dir.read(), nil
+func (v vosFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	return fs.ReadDir(v.vfs, name)
 }
 
 func (v vosFS) WriteFile(name string, data []byte, perm os.FileMode) error {
@@ -212,18 +86,14 @@ func (v vosFS) WriteFile(name string, data []byte, perm os.FileMode) error {
 	if err != nil {
 		return newPathError("open", parent, err)
 	}
-	if err := parDir.update(base, vFile{data}); err != nil {
+	if err := parDir.update(base, newVFile(data)); err != nil {
 		return newPathError("write", name, err)
 	}
 	return nil
 }
 
 func (v vosFS) ReadFile(name string) ([]byte, error) {
-	f, err := v.getFile(name)
-	if err != nil {
-		return nil, newPathError("open", name, err)
-	}
-	return f.data, nil
+	return fs.ReadFile(v.vfs, name)
 }
 
 func (v vosFS) Rename(oldpath, newpath string) error {
