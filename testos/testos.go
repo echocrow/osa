@@ -24,6 +24,125 @@ func AssertOsa(
 	assertExit func(t *testing.T),
 	getStdio func() (in io.Writer, out, err io.Reader, reset func()),
 ) {
+	t.Run("OpenDir", func(t *testing.T) {
+		tmpDir := mkTempDir()
+
+		dirBasename := "some-dir"
+		dirname := filepath.Join(tmpDir, dirBasename)
+		RequireMkdir(t, osa, dirname)
+
+		got, err := osa.Open(dirname)
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+
+		gotStat, err := got.Stat()
+		assert.NoError(t, err)
+		assert.True(t, gotStat.IsDir(), "expect dir, not file")
+		assert.Equal(t, dirBasename, gotStat.Name())
+
+		gotConts := make([]byte, 1)
+		gotLen, err := got.Read(gotConts)
+		assert.Zero(t, gotLen)
+		assert.Error(t, err)
+	})
+	t.Run("OpenFile", func(t *testing.T) {
+		tmpDir := mkTempDir()
+
+		fileBasename := "some-file.foo"
+		filename := filepath.Join(tmpDir, fileBasename)
+		data := []byte("some data")
+		filelen := len(data)
+		RequireWrite(t, osa, filename, string(data))
+
+		got, err := osa.Open(filename)
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+
+		gotStat, err := got.Stat()
+		assert.NoError(t, err)
+		assert.False(t, gotStat.IsDir(), "expect file, not dir")
+		assert.Equal(t, fileBasename, gotStat.Name())
+		assert.Equal(t, int64(filelen), gotStat.Size())
+
+		wantConts := append(data, 0)
+		gotConts := make([]byte, filelen+1)
+		gotLen, err := got.Read(gotConts)
+		assert.NoError(t, err)
+		assert.Equal(t, filelen, gotLen)
+		assert.Equal(t, wantConts, gotConts)
+
+		err = got.Close()
+		assert.NoError(t, err)
+		err = got.Close()
+		assert.Error(t, err)
+
+		gotLen2, err := got.Read(gotConts)
+		assert.Zero(t, gotLen2)
+		assert.Error(t, err)
+	})
+	t.Run("OpenFilePartialRead", func(t *testing.T) {
+		tmpDir := mkTempDir()
+
+		filename := filepath.Join(tmpDir, "someFile")
+		data := []byte("some more data")
+		RequireWrite(t, osa, filename, string(data))
+
+		got, err := osa.Open(filename)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+
+		wantConts1 := data[0:4]
+		gotConts1 := make([]byte, len(wantConts1))
+		gotLen1, err := got.Read(gotConts1)
+		assert.NoError(t, err)
+		assert.Equal(t, len(wantConts1), gotLen1)
+		assert.Equal(t, wantConts1, gotConts1)
+
+		wantConts2 := data[len(wantConts1):]
+		gotConts2 := make([]byte, len(wantConts2))
+		gotLen2, err := got.Read(gotConts2)
+		assert.NoError(t, err)
+		assert.Equal(t, len(wantConts2), gotLen2)
+		assert.Equal(t, wantConts2, gotConts2)
+
+		wantConts3 := make([]byte, 1)
+		gotConts3 := make([]byte, len(wantConts3))
+		gotLen3, err := got.Read(gotConts3)
+		assert.ErrorIs(t, err, io.EOF)
+		assert.Zero(t, gotLen3)
+		assert.Equal(t, wantConts3, gotConts3)
+
+		err = got.Close()
+		assert.NoError(t, err)
+	})
+	t.Run("OpenFileReadErrClosed", func(t *testing.T) {
+		tmpDir := mkTempDir()
+		path := filepath.Join(tmpDir, "testFile")
+		RequireWrite(t, osa, path, "some file data")
+
+		got, err := osa.Open(path)
+		require.NoError(t, err)
+
+		err = got.Close()
+		require.NoError(t, err)
+
+		gotConts := make([]byte, 1)
+		gotRead, err := got.Read(gotConts)
+		assert.Empty(t, gotRead)
+		assert.Equal(t, make([]byte, 1), gotConts)
+		assert.Error(t, err)
+	})
+	t.Run("OpenErrNotExist", func(t *testing.T) {
+		tmpDir := mkTempDir()
+
+		missingFilename := filepath.Join(tmpDir, "missing")
+		RequireNotExists(t, osa, missingFilename)
+
+		_, err := osa.Open(missingFilename)
+		assert.Error(t, err)
+		assert.True(t, osa.IsNotExist(err), "want not-exist error")
+	})
+
 	t.Run("StatDir", func(t *testing.T) {
 		tmpDir := mkTempDir()
 

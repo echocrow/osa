@@ -27,6 +27,10 @@ const (
 	outPrefix string = "gen_"
 )
 
+var knownImports = map[string]string{
+	"fs": "io/fs",
+}
+
 var (
 	pkgPath   string
 	osaName   string
@@ -314,6 +318,9 @@ func collectImports(methods []method) *strset.Set {
 			rt := rf.Type
 			if rse, ok := rt.(*ast.SelectorExpr); ok {
 				pkg := rse.X.(*ast.Ident).Name
+				if pkgPth, ok := knownImports[pkg]; ok {
+					pkg = pkgPth
+				}
 				imports.Add(pkg)
 			}
 		}

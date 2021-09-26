@@ -3,10 +3,16 @@ package oos
 
 import (
 	"io"
+	"io/fs"
 	"os"
 )
 
 type oos struct{}
+
+// Open opens the named file.
+func (oos) Open(name string) (fs.File, error) {
+	return os.Open(name)
+}
 
 // Lstat returns a FileInfo describing the named file.
 func (oos) Stat(name string) (FileInfo, error) {

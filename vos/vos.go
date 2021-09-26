@@ -73,6 +73,22 @@ func New() vos {
 	return *v
 }
 
+func (vos vos) Open(name string) (fs.File, error) {
+	got, err := vos.get(name)
+	if err != nil {
+		return nil, newPathError("open", name, err)
+	}
+	_, base := filepath.Split(name)
+	var data []byte
+	if file, ok := got.(vFile); ok {
+		data = file.data
+	}
+	return &fsFile{
+		name: base,
+		data: data,
+	}, nil
+}
+
 func (vos vos) Stat(name string) (os.FileInfo, error) {
 	e, err := vos.get(name)
 	if err != nil {

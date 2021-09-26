@@ -4,9 +4,15 @@ package osa_test
 import (
 	"github.com/echocrow/osa"
 	"io"
+	"io/fs"
 )
 
 type gbl struct{}
+
+// Open opens the named file.
+func (gbl) Open(name string) (fs.File, error) {
+	return osa.Open(name)
+}
 
 // Lstat returns a FileInfo describing the named file.
 func (gbl) Stat(name string) (FileInfo, error) {

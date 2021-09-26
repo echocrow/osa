@@ -16,11 +16,15 @@
 package osa
 
 import (
+	"io/fs"
+
 	"github.com/echocrow/osa/oos"
 )
 
 // Interface I describes available OS methods on the OS abstraction.
 type I interface {
+	// Open opens the named file.
+	Open(name string) (fs.File, error)
 	// Lstat returns a FileInfo describing the named file.
 	Stat(name string) (FileInfo, error)
 	// IsExist returns a boolean indicating whether the error is known to report

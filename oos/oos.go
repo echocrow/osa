@@ -8,6 +8,7 @@ func New() oos {
 	return oos{}
 }
 
+type File = *os.File
 type FileInfo = os.FileInfo
 type FileMode = os.FileMode
 type DirEntry = os.DirEntry
