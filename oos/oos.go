@@ -1,4 +1,4 @@
-// Package vos provides the original OS abstraction implementation.
+// Package oos provides the original OS abstraction implementation.
 package oos
 
 import "os"

@@ -38,9 +38,10 @@ func AssertOrgOS(t *testing.T, osa osaPkg.I) {
 	assertOsExternals(t, osa)
 }
 
-// assertOsExternals tests special external OS-related OSA operations. These
-// tests leaverage the os package directly and should thus only be run on OSA
-// implementations that utilise os package operations.
+// assertOsExternals tests special external OS-related OSA operations.
+//
+// These tests leaverage the os package directly and should thus only be run on
+// OSA implementations that utilise os package operations.
 func assertOsExternals(t *testing.T, osa osaPkg.I) {
 	t.Run("OsGetwd", func(t *testing.T) {
 		want, err := os.Getwd()
@@ -66,6 +67,7 @@ func assertOsExternals(t *testing.T, osa osaPkg.I) {
 }
 
 // testOsExitCode tests that a program exists with the desired exit code.
+//
 // Assessment is done by spawning a new process. This can be relatively slow,
 // so running repetitive calls as parallel tests is recommended.
 // Due to an implementation detail, any required function arguments must be
@@ -95,6 +97,7 @@ var testExitEnv = "OSA_TEST_EXIT"
 
 // testOsExitCodes runs a series of exit code tests, asserting that a program
 // exists with the desired exit code.
+//
 // Due to an implementation detail, any required function arguments must be
 // encoded as a single string. The encoding and decoding is left to getArgs
 // and exitFunc.

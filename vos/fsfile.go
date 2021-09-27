@@ -98,6 +98,7 @@ type fsDir struct {
 
 // ReadDir reads the contents of the directory and returns a slice of up to n
 // DirEntry values in directory order.
+//
 // See fs.ReadDirFile
 func (d *fsDir) ReadDir(n int) ([]fs.DirEntry, error) {
 	if d.isClosed {
