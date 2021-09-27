@@ -8,6 +8,7 @@ Go code (golang) packages that offer easy in-memory testing of code calling [os]
 - [Packages](#packages)
 - [Basic Usage](#basic-usage-tldr)
 - [Extended Usage](#extended-usage)
+- [API Documentation](#api-documentation)
 
 ## Features
 
@@ -119,3 +120,7 @@ func TestAnotherExample(t *testing.T) {
  	// ...
 }
 ```
+
+## API Documentation
+
+- See [OSA on pkg.go.dev](https://pkg.go.dev/github.com/echocrow/osa).
