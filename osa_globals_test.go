@@ -7,6 +7,7 @@ import (
 
 	"github.com/echocrow/osa"
 	"github.com/echocrow/osa/testos"
+	"github.com/echocrow/osa/testosa"
 )
 
 //go:generate go run ./gen -name=gbl -call=osa -import=github.com/echocrow/osa
@@ -16,7 +17,7 @@ type DirEntry = osa.DirEntry
 
 func TestGlobals(t *testing.T) {
 	g := gbl{}
-	testos.AssertOrgOS(t, g)
+	testosa.AssertOrgOS(t, g)
 }
 
 type custStdioGbl struct {
@@ -37,7 +38,7 @@ func TestGlobalStdio(t *testing.T) {
 	defer reset()
 
 	// Require that stdio works as expected before the actual assertion.
-	testos.AssertStdio(t, cg, stdio, stdio, stdio)
+	testosa.AssertStdio(t, cg, stdio, stdio, stdio)
 
 	stdout := getStdout()
 	msg := "some custom stdio message"

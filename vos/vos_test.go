@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/echocrow/osa"
-	"github.com/echocrow/osa/testos"
+	"github.com/echocrow/osa/testosa"
 	"github.com/echocrow/osa/vos"
 	"github.com/stretchr/testify/assert"
 )
@@ -43,5 +43,5 @@ func TestVos(t *testing.T) {
 		return
 	}
 
-	testos.AssertOsa(t, v, mkTempDir, assertExit, getStdio)
+	testosa.AssertOsa(t, v, mkTempDir, assertExit, getStdio)
 }

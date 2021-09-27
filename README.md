@@ -27,7 +27,8 @@ The following packages are included:
 - `osa`: The main OS abstraction package. It determines which `os` functions are supported and tracks the currently active implementation. Implementing packages simply need to import this package instead of `"os"`, no further changes required.
 - `osa/oos`: The standard `osa` implementation. This package simply wraps and calls the default `os` functions of the standard library. This is the default `osa` implementation, so typically code does not need to import or directly interact with this package.
 - `osa/vos`: The virtual `osa` implementation. This package mimicks `os` features in-memory, so no real files are created, read, updated, or deleted. The package provides a `Patch()` function to inject this implementation for testing. Only test packages need to know about this.
-- `osa/testos`: An OS testing package. Besides offering functionality to test a custom `osa` implementation, it also provides useful helper functions for repetitive `os` calls and assert/require checks during testing, such as `RequireWrite()`, `RequireMkdirAll()`, `AssertNotExists()`, `AssertFileData()`, `GetStdio()`, and more.
+- `osa/testos`: An OS testing helpers library. This package provides useful helper functions for repetitive `os` calls and assert/require operations during testing, such as `RequireWrite()`, `RequireMkdirAll()`, `AssertNotExists()`, `AssertFileData()`, `GetStdio()`, and more.
+- `osa/testosa`: An OSA testing library. This package provides assertions for custom OSA implementations.
 
 ## Basic Usage (TLDR)
 

@@ -1,4 +1,4 @@
-package testos
+package testosa
 
 import (
 	"fmt"
