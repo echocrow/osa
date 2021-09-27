@@ -844,11 +844,18 @@ func RequireIsEmpty(t *testing.T, osa osaPkg.I, path string) {
 	require.True(t, empty, "expected %s to be empty", path)
 }
 
-// RequireMkdirTemp requires that a temp dir was created.
-func RequireMkdirTemp(t *testing.T, osa osaPkg.I) string {
+// RequireTempDir requires that a temp dir was created.
+func RequireTempDir(t *testing.T, osa osaPkg.I) string {
 	tmpDir, err := osa.MkdirTemp("", "")
 	require.NoError(t, err)
 	return tmpDir
+}
+
+// RequireMkdirTemp requires that a temp dir was created.
+//
+// Deprecated: Use RequireTempDir.
+func RequireMkdirTemp(t *testing.T, osa osaPkg.I) string {
+	return RequireTempDir(t, osa)
 }
 
 // Join joins any number of path elements into a single path.
