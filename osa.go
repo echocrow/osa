@@ -5,6 +5,7 @@
 //	import (
 //		os "github.com/echocrow/osa"
 //	)
+//
 //	data, err := os.ReadFile("file.go") // Use "os" as usual.
 //	if err != nil {
 //		log.Fatal(err)
@@ -80,8 +81,11 @@ var osa I = Default()
 func Current() I { return osa }
 
 // Patch monkey-patches the OS abstraction and returns a restore function.
-// TODO Make thread-safe.
-// TODO Make chain-patching-safe.
+//
+// BUG(echocrow): Patch is not yet thread-safe.
+//
+// BUG(echocrow): Calling Patch multiple times before resetting may result in
+// incomplete resets when reset funcs are not invoked in reverse order.
 func Patch(o I) func() {
 	org := osa
 	osa = o
