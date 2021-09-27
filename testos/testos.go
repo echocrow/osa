@@ -124,13 +124,6 @@ func RequireTempDir(t *testing.T, osa osaPkg.I) string {
 	return tmpDir
 }
 
-// RequireMkdirTemp requires that a temp dir was created.
-//
-// Deprecated: Use RequireTempDir.
-func RequireMkdirTemp(t *testing.T, osa osaPkg.I) string {
-	return RequireTempDir(t, osa)
-}
-
 // Join joins any number of path elements into a single path.
 func Join(elem ...string) string {
 	return filepath.Join(elem...)
