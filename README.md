@@ -28,7 +28,7 @@ The following packages are included:
 - `osa/vos`: The virtual `osa` implementation. This package mimicks `os` features in-memory, so no real files are created, read, updated, or deleted. The package provides a `Patch()` function to inject this implementation for testing. Only test packages need to know about this.
 - `osa/testos`: An OS testing package. Besides offering functionality to test a custom `osa` implementation, it also provides useful helper functions for repetitive `os` calls and assert/require checks during testing, such as `RequireWrite()`, `RequireMkdirAll()`, `AssertNotExists()`, `AssertFileData()`, `GetStdio()`, and more.
 
-## Basic Usage (TL;DR)
+## Basic Usage (TLDR)
 
 Use `osa` package instead of `os`:
 ```diff
