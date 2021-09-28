@@ -1,4 +1,4 @@
-// Package testos provides utilities for common OS test assert/require
+// Package testos provides utilities for common OS assert/require test
 // operations.
 package testos
 

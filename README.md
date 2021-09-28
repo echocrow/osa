@@ -12,23 +12,24 @@ Go code (golang) packages that offer easy in-memory testing of code calling [os]
 
 ## Features
 
-- Support for most `os` functions (as of Go 1.17).
-- [Monkey-patching](https://en.wikipedia.org/wiki/Monkey_patch) in-memory `os` replacement during testing, allowing for:
+- Use `os.*` functions like you normally would.
+- [Monkey-patch](https://en.wikipedia.org/wiki/Monkey_patch) in-memory `os` replacement during testing, allowing for:
   - Fast file I/O tests without causing any real filesystem reads or writes.
   - Simple stdio (stdin/stdou/stderr) testing without needing to call a subprocess.
   - Exit code catching & testing without needing to call a subprocess.
+- Support for most `os` functions (as of Go 1.17).
 - No extensive rewrites or dependency injections required.
-- Common `os` assert/require test helper functions included.
+- Common `os` assert/require test utility functions included.
 
 ## Packages
 
 The following packages are included:
 
-- `osa`: The main OS abstraction package. It determines which `os` functions are supported and tracks the currently active implementation. Implementing packages simply need to import this package instead of `"os"`, no further changes required.
-- `osa/oos`: The standard `osa` implementation. This package simply wraps and calls the default `os` functions of the standard library. This is the default `osa` implementation, so typically code does not need to import or directly interact with this package.
-- `osa/vos`: The virtual `osa` implementation. This package mimicks `os` features in-memory, so no real files are created, read, updated, or deleted. The package provides a `Patch()` function to inject this implementation for testing. Only test packages need to know about this.
-- `osa/testos`: An OS testing helpers library. This package provides useful helper functions for repetitive `os` calls and assert/require operations during testing, such as `RequireWrite()`, `RequireMkdirAll()`, `AssertNotExists()`, `AssertFileData()`, `GetStdio()`, and more.
-- `osa/testosa`: An OSA testing library. This package provides assertions for custom OSA implementations.
+- [`osa`](https://pkg.go.dev/github.com/echocrow/osa): The main OS abstraction package. It determines which `os` functions are supported and tracks the currently active implementation. Implementing packages simply need to import this package instead of `"os"`, no further changes required.
+- [`osa/oos`](https://pkg.go.dev/github.com/echocrow/osa/oos): The standard `osa` implementation. This package simply wraps and calls the default `os` functions of the standard library. This is the default `osa` implementation, so typically code does not need to import or directly interact with this package.
+- [`osa/vos`](https://pkg.go.dev/github.com/echocrow/osa/vos): The virtual `osa` implementation. This package mimicks `os` features in-memory, so no real files are created, read, updated, or deleted. The package provides a `Patch()` function to inject this implementation for testing. Only test packages need to know about this.
+- [`osa/testos`](https://pkg.go.dev/github.com/echocrow/osa/testos): An OS testing helpers library. This package provides useful helper functions for repetitive `os` calls and assert/require operations during testing, such as `RequireWrite()`, `RequireMkdirAll()`, `AssertNotExists()`, `AssertFileData()`, `GetStdio()`, and more.
+- [`osa/testosa`](https://pkg.go.dev/github.com/echocrow/osa/testosa): An OSA testing library. This package provides assertions for custom OSA implementations.
 
 ## Basic Usage (TLDR)
 
@@ -104,21 +105,26 @@ func TestExample(t *testing.T) {
 }
 ```
 
-If you need to call `os` methods during the test, the patch function of the `vos` package also returns the virtual, patched `os` abstraction:
+If you need to call `os` methods during the test, the patch function of the `vos` package also returns the virtual, patched `os` abstraction. Combine it with `osa/testos` to more quickly initialize file setups during testing:
 
 ```go
 func TestAnotherExample(t *testing.T) {
-	// Monkey-patch and get a virtual OS implementation.
+	// Monkey-patch and get virtual OS implementation.
 	os, reset := vos.Patch()
 	defer reset()
 
-	// Set up test like you normally would. All side-effects happen purely
-	// in-memory thanks to vos, e.g.:
-	cfgDir, _ := os.UserConfigDir()
-	cfgPath := filepath.Join(cfgDir, "my-config")
-	os.WriteFile(cfgPath, []byte("my-data"), 0666)
+	// Set up files & directories, e.g.:
+	userCfgDir, err := os.UserConfigDir()
+	require.NoError(t, err)
+	cfgDir := testos.Join(userCfgDir, "my-app")
+	testos.RequireMkdirAll(t, os, testos.Join(cfgDir, "subdir", "deepdir"))
+	testos.RequireWrite(t, os, testos.Join(cfgDir, "my-config"), "my-data")
 
- 	// ...
+	// ...
+
+	// Test expected vs actual file setup results.
+	wantFile := testos.Join(cfgDir, "expected-file")
+	testos.AssertFileData(t, os, wantFile, "expected-contents")
 }
 ```
 
